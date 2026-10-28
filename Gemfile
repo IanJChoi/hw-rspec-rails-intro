@@ -11,6 +11,9 @@ gem 'jquery-rails'
 gem 'bigdecimal', '1.3.5'
 gem 'web-console', '~> 4'
 
+# Part 1: TMDb API
+gem 'faraday', '1.8.0'
+
 # for Heroku deployment - as described in Ap. A of ELLS book
 group :development, :test do
   gem 'byebug'
@@ -22,6 +25,12 @@ group :development, :test do
 
   # Use sqlite3 as the database for Active Record
   gem 'sqlite3', '~> 1.7'
+end
+
+# Part 1: RSpec and Guard
+group :test do
+  gem 'rails-controller-testing'
+  gem 'guard-rspec'
 end
 
 group :production do

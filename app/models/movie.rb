@@ -1,4 +1,5 @@
 class Movie < ActiveRecord::Base
+
   def self.all_ratings
     %w[G PG PG-13 R]
   end
@@ -10,4 +11,9 @@ class Movie < ActiveRecord::Base
       where(rating: ratings.map(&:upcase)).order sort_by
     end
   end
+
+  def self.find_in_tmdb(string)
+    Faraday.get(string)
+  end
+
 end
