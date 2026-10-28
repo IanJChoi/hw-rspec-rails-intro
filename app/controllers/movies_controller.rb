@@ -2,13 +2,55 @@ class MoviesController < ApplicationController
   before_action :force_index_redirect, only: [:index]
 
   def search_tmdb
-    @movies = Movie.find_in_tmdb(params[:search_terms])
+    @movies = []
+
+    # Handle the actual search form.
+    if params.key?(:title)
+      title = params[:title].to_s.strip
+
+      search_params = {
+        title: title,
+        release_year: params[:release_year],
+        language: params[:language]
+      }
+
+    # Preserve compatibility with previous controller specs.
+    elsif params.key?(:search_terms)
+      title = params[:search_terms].to_s.strip
+      search_params = title
+
+    else
+      # Initial visit to /search.
+      return
+    end
+
+    if title.blank?
+      flash.now[:danger] = 'Please fill in all required fields!'
+      return
+    end
+
+    @movies = Movie.find_in_tmdb(search_params)
+
+    if @movies.empty?
+      flash.now[:warning] = 'No movies found with given parameters!'
+    end
+
+  rescue Faraday::Error, JSON::ParserError, ArgumentError, RuntimeError
+    @movies = []
+    flash.now[:danger] = 'TMDb search failed. Please try again.'
+  end
+
+  def add_movie
+    @movie = Movie.create!(movie_params)
+
+    flash[:success] = "#{@movie.title} was successfully added to RottenPotatoes."
+
+    redirect_to search_tmdb_path
   end
 
   def show
-    id = params[:id] # retrieve movie ID from URI route
-    @movie = Movie.find(id) # look up movie by unique ID
-    # will render app/views/movies/show.<extension> by default
+    id = params[:id]
+    @movie = Movie.find(id)
   end
 
   def index
@@ -16,13 +58,12 @@ class MoviesController < ApplicationController
     @movies = Movie.with_ratings(ratings_list, sort_by)
     @ratings_to_show_hash = ratings_hash
     @sort_by = sort_by
-    # remember the correct settings for next time
+
     session['ratings'] = ratings_list
     session['sort_by'] = @sort_by
   end
 
   def new
-    # default: render 'new' template
   end
 
   def create
@@ -32,12 +73,13 @@ class MoviesController < ApplicationController
   end
 
   def edit
-    @movie = Movie.find params[:id]
+    @movie = Movie.find(params[:id])
   end
 
   def update
-    @movie = Movie.find params[:id]
+    @movie = Movie.find(params[:id])
     @movie.update!(movie_params)
+
     flash[:notice] = "#{@movie.title} was successfully updated."
     redirect_to movie_path(@movie)
   end
@@ -45,16 +87,27 @@ class MoviesController < ApplicationController
   def destroy
     @movie = Movie.find(params[:id])
     @movie.destroy
+
     flash[:notice] = "Movie '#{@movie.title}' deleted."
     redirect_to movies_path
   end
 
   private
 
+  def movie_params
+    params.require(:movie).permit(
+      :title,
+      :rating,
+      :description,
+      :release_date
+    )
+  end
+
   def force_index_redirect
     return unless !params.key?(:ratings) || !params.key?(:sort_by)
 
     flash.keep
+
     url = movies_path(sort_by: sort_by, ratings: ratings_hash)
     redirect_to url
   end

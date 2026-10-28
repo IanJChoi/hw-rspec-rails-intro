@@ -31,4 +31,54 @@ describe MoviesController, type: :controller do
 
     end
   end
+
+    describe 'searching from the form' do
+
+    it 'shows an error when title is missing' do
+      expect(Movie).not_to receive(:find_in_tmdb)
+
+      get :search_tmdb, params: { title: '' }
+
+      expect(flash[:danger]).to eq(
+        'Please fill in all required fields!'
+      )
+    end
+
+    it 'shows a message when no movies are found' do
+      allow(Movie).to receive(:find_in_tmdb).and_return([])
+
+      get :search_tmdb, params: {
+        title: 'Nonexistent Movie',
+        language: 'all'
+      }
+
+      expect(flash[:warning]).to eq(
+        'No movies found with given parameters!'
+      )
+    end
+
+  end
+
+  describe 'adding a movie' do
+
+    it 'saves a movie and redirects to search page' do
+      movie_data = {
+        title: 'Manhunter',
+        rating: 'R',
+        release_date: '1986-08-15',
+        description: 'A crime thriller.'
+      }
+
+      expect {
+        post :add_movie, params: { movie: movie_data }
+      }.to change(Movie, :count).by(1)
+
+      expect(response).to redirect_to(search_tmdb_path)
+
+      expect(flash[:success]).to eq(
+        'Manhunter was successfully added to RottenPotatoes.'
+      )
+    end
+
+  end
 end
